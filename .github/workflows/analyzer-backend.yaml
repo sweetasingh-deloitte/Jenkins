@@ -1,0 +1,106 @@
+name: analyzer-backend
+
+on: 
+  push: 
+    paths:
+      - 'analyzer/analyzer-backend/**'     
+env:
+    PROJECT_ID: us-gcp-ame-con-116-npd-1
+    SERVICE_NAME: analyzer-backend
+    REGION: us-west2
+
+jobs:  
+  zipkin-server:
+    name: zipkin-server 
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: analyzer/analyzer-backend
+    steps: 
+      - name: Checkout 
+        uses: actions/checkout@master 
+
+      # Setup gcloud CLI 
+      - uses: google-github-actions/setup-gcloud@v0 
+        with: 
+          service_account_key: ${{ secrets.GCP_SA_KEY}}            
+
+      - name: Configure project id 
+        run: | 
+          gcloud config set project $PROJECT_ID
+
+      #Build and Push image 
+      - name: Build 
+        run: |
+          docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME-zipkin-server  ./zipkin-server
+
+      # Configure docker to use the gcloud command-line tool as a credential helper 
+      - run: | 
+          gcloud auth configure-docker -q 
+
+      # Push image to Google Container Registry 
+      - name: Push 
+        run: |
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME-zipkin-server
+
+      - name: Deploy 
+        run: |     
+          gcloud run deploy $SERVICE_NAME-zipkin-server --image gcr.io/$PROJECT_ID/$SERVICE_NAME-zipkin-server --port=9411 --min-instances=1 --max-instances=2 --memory=512Mi  --cpu=1 --platform managed --region $REGION --allow-unauthenticated  --vpc-connector hu-conn --add-cloudsql-instances huex-new
+
+
+  mcube-user-service:
+    name: mcube-user-service
+    runs-on: ubuntu-latest 
+    steps: 
+      - name: Checkout 
+        uses: actions/checkout@master 
+      # Setup gcloud CLI 
+      - uses: google-github-actions/setup-gcloud@v0 
+        with: 
+          service_account_key: ${{ secrets.GCP_SA_KEY}}            
+      - name: Configure project id 
+        run: | 
+          gcloud config set project $PROJECT_ID
+      #Build and Push image 
+      - name: Build 
+        run: |
+          docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME-mcube-user-service  ./mcube-user-service
+      # Configure docker to use the gcloud command-line tool as a credential helper 
+      - run: | 
+          gcloud auth configure-docker -q 
+      # Push image to Google Container Registry 
+      - name: Push 
+        run: |
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME-mcube-user-service
+      - name: Deploy 
+        run: |     
+          gcloud run deploy $SERVICE_NAME-mcube-user-service --image gcr.io/$PROJECT_ID/$SERVICE_NAME-mcube-user-service --port=0000 --min-instances=1 --max-instances=2 --memory=512Mi  --cpu=1 --platform managed --region $REGION --allow-unauthenticated  --vpc-connector hu-conn --add-cloudsql-instances huex-new
+
+  
+  mcube-trip-service:
+    name: mcube-trip-service
+    runs-on: ubuntu-latest 
+    steps: 
+      - name: Checkout 
+        uses: actions/checkout@master 
+      # Setup gcloud CLI 
+      - uses: google-github-actions/setup-gcloud@v0 
+        with: 
+          service_account_key: ${{ secrets.GCP_SA_KEY}}            
+      - name: Configure project id 
+        run: | 
+          gcloud config set project $PROJECT_ID
+      #Build and Push image 
+      - name: Build 
+        run: |
+          docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME-mcube-trip-service  ./mcube-trip-service
+      # Configure docker to use the gcloud command-line tool as a credential helper 
+      - run: | 
+          gcloud auth configure-docker -q 
+      # Push image to Google Container Registry 
+      - name: Push 
+        run: |
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME-mcube-trip-service
+      - name: Deploy 
+        run: |     
+          gcloud run deploy $SERVICE_NAME-mcube-trip-service --image gcr.io/$PROJECT_ID/$SERVICE_NAME-mcube-trip-service --port=8080 --min-instances=1 --max-instances=2 --memory=512Mi  --cpu=1 --platform managed --region $REGION --allow-unauthenticated  --vpc-connector hu-conn --add-cloudsql-instances huex-new
